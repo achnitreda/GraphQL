@@ -12,6 +12,16 @@ function createXPProgressChart(data, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
+    // Clean up any existing resize handlers
+    if (window.chartResizeHandlers && window.chartResizeHandlers[containerId]) {
+        window.removeEventListener('resize', window.chartResizeHandlers[containerId]);
+    }
+
+    // Initialize the handlers object if it doesn't exist
+    if (!window.chartResizeHandlers) {
+        window.chartResizeHandlers = {};
+    }
+
     container.innerHTML = '';
 
     let cumulativeXP = 0;
@@ -21,15 +31,12 @@ function createXPProgressChart(data, containerId) {
             date: new Date(item.createdAt),
             xp: cumulativeXP
         };
-    })
+    });
 
     if (chartData.length === 0) {
         container.textContent = 'No XP data available';
         return;
     }
-
-    // DEBUG
-    // console.log("chartData ->", chartData)
 
     // Get container width dynamically - RESPONSIVE APPROACH
     const containerWidth = container.clientWidth || 320;
@@ -37,7 +44,6 @@ function createXPProgressChart(data, containerId) {
 
     // Calculate aspect ratio for height - maintain proportions on resize
     const aspectRatio = 0.6; // height = 60% of width
-
 
     // Dynamic margins based on screen size
     const margin = {
@@ -240,20 +246,28 @@ function createXPProgressChart(data, containerId) {
 
     container.appendChild(svg);
 
-    // Add window resize listener to redraw chart on window resize
-    const resizeHandler = () => {
-        // Debounce the resize to avoid performance issues
-        if (resizeHandler.timeout) {
-            clearTimeout(resizeHandler.timeout);
+    // Create a properly debounced resize handler
+    const debounceResizeHandler = () => {
+        if (debounceResizeHandler.timeout) {
+            clearTimeout(debounceResizeHandler.timeout);
         }
-        resizeHandler.timeout = setTimeout(() => {
-            createXPProgressChart(data, containerId);
-        }, 250);
+        
+        debounceResizeHandler.timeout = setTimeout(() => {
+            // Only redraw if container width has changed
+            const newWidth = container.clientWidth;
+            if (newWidth !== containerWidth) {
+                requestAnimationFrame(() => {
+                    createXPProgressChart(data, containerId);
+                });
+            }
+        }, 250); // Wait 250ms after resize stops before redrawing
     };
 
-    // Remove previous listener if exists
-    window.removeEventListener('resize', resizeHandler);
-    window.addEventListener('resize', resizeHandler);
+    // Store the handler reference to clean it up later
+    window.chartResizeHandlers[containerId] = debounceResizeHandler;
+    
+    // Add the event listener
+    window.addEventListener('resize', debounceResizeHandler);
 }
 
 function createProjectSuccessChart(data, containerId) {
@@ -443,3 +457,4 @@ function createProjectSuccessChart(data, containerId) {
 
     container.appendChild(svg);
 }
+
