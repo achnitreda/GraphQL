@@ -76,30 +76,3 @@ async function login(identifier, password) {
 function logout() {
     localStorage.removeItem(AUTH_TOKEN_KEY)
 }
-
-function parseJwt(token) {
-    try {
-        // Split the token and get the payload part
-        const base64Url = token.split('.')[1];
-        // When working with JWTs, which are often transmitted in HTTP headers or URLs
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        // Decode the base64 string
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-
-        return JSON.parse(jsonPayload);
-    } catch (error) {
-        console.error('Error parsing JWT', error);
-        return null;
-    }
-}
-
-// still not used ??
-function getCurrentUserId() {
-    const token = localStorage.getItem(AUTH_TOKEN_KEY)
-    if (!token) return null;
-
-    const decoded = parseJwt(token)
-    return decoded?.sub || decoded?.['https://hasura.io/jwt/claims']?.['x-hasura-user-id'] || null
-}

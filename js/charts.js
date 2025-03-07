@@ -29,48 +29,62 @@ function createXPProgressChart(data, containerId) {
     }
 
     // DEBUG
-    console.log("chartData ->", chartData)
+    // console.log("chartData ->", chartData)
 
-    // Chart dimensions
-    const margin = { top: 20, right: 20, buttom: 40, left: 60 }
-    const width = 500 - margin.left - margin.right
-    const height = 300 - margin.top - margin.buttom
+    // Get container width dynamically - RESPONSIVE APPROACH
+    const containerWidth = container.clientWidth || 320;
+    const isSmallScreen = containerWidth < 500;
 
-    // Create SVG
+    // Calculate aspect ratio for height - maintain proportions on resize
+    const aspectRatio = 0.6; // height = 60% of width
+
+
+    // Dynamic margins based on screen size
+    const margin = {
+        top: 20,
+        right: isSmallScreen ? 10 : 20,
+        bottom: 40,
+        left: isSmallScreen ? 40 : 60
+    };
+
+    // Dynamic width and height based on container
+    const width = containerWidth - margin.left - margin.right;
+    const height = Math.min(containerWidth * aspectRatio, 300) - margin.top - margin.bottom;
+
+    // Create SVG with viewBox for responsive scaling
     const svg = createSVGElement('svg', {
-        width: width + margin.left + margin.right,
-        height: height + margin.top + margin.buttom,
-    })
+        width: "100%",
+        height: "100%",
+        viewBox: `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`,
+        preserveAspectRatio: "xMidYMid meet"
+    });
 
     // Create group for chart elements with margin
     const g = createSVGElement('g', {
         transform: `translate(${margin.left},${margin.top})`
-    })
-    svg.appendChild(g)
+    });
+    svg.appendChild(g);
 
     // Find min and max values for scales
-    const minDate = chartData[0].date
-    const maxDate = chartData[chartData.length - 1].date
-
+    const minDate = chartData[0].date;
+    const maxDate = chartData[chartData.length - 1].date;
     const maxXP = chartData[chartData.length - 1].xp;
 
     // Create x and y scales
-    // For x scale (dates), we map date range to pixel range
     const xScale = (date) => {
-        return ((date - minDate) / (maxDate - minDate)) * width
-    }
+        return ((date - minDate) / (maxDate - minDate)) * width;
+    };
 
-    // For y scale (XP), we map XP range to pixel range
     const yScale = (xp) => {
-        return height - (xp / maxXP * height)
-    }
+        return height - (xp / maxXP * height);
+    };
 
     // Create axes
     // X axis
     const xAxis = createSVGElement('g', {
         transform: `translate(0,${height})`
-    })
-    g.appendChild(xAxis)
+    });
+    g.appendChild(xAxis);
 
     const xAxisLine = createSVGElement('line', {
         x1: 0,
@@ -79,14 +93,14 @@ function createXPProgressChart(data, containerId) {
         y2: 0,
         stroke: '#333',
         'stroke-width': 1
-    })
-    xAxis.appendChild(xAxisLine)
+    });
+    xAxis.appendChild(xAxisLine);
 
-    // X axis labels
-    // We'll show 5 date labels evenly spaced
-    for (i = 0; i <= 5; i++) {
-        const date = new Date(minDate.getTime() + (maxDate.getTime() - minDate.getTime()) * (i / 5))
+    // X axis labels - adjust number of labels based on width
+    const labelCount = isSmallScreen ? 3 : 5;
 
+    for (let i = 0; i <= labelCount; i++) {
+        const date = new Date(minDate.getTime() + (maxDate.getTime() - minDate.getTime()) * (i / labelCount));
         const x = xScale(date);
 
         // Tick
@@ -97,18 +111,27 @@ function createXPProgressChart(data, containerId) {
             y2: 5,
             stroke: '#333',
             'stroke-width': 1
-        })
-        xAxis.appendChild(tick)
+        });
+        xAxis.appendChild(tick);
 
-        // Label
+        // Label - use shorter date format on small screens
         const label = createSVGElement('text', {
             x: x,
             y: 20,
             'text-anchor': 'middle',
-            'font-size': '10px'
-        })
-        label.textContent = date.toLocaleDateString()
-        xAxis.appendChild(label)
+            'font-size': isSmallScreen ? '8px' : '10px'
+        });
+
+        // Format dates differently based on screen size
+        if (isSmallScreen) {
+            // Short format for small screens: "Jan 1" or "1/1"
+            label.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        } else {
+            // Regular format for larger screens
+            label.textContent = date.toLocaleDateString();
+        }
+
+        xAxis.appendChild(label);
     }
 
     // Y axis
@@ -125,8 +148,11 @@ function createXPProgressChart(data, containerId) {
     });
     yAxis.appendChild(yAxisLine);
 
-    for (let i = 0; i <= 5; i++) {
-        const xp = maxXP * (i / 5);
+    // Y axis labels - adjust number of ticks based on height
+    const yLabelCount = isSmallScreen ? 3 : 5;
+
+    for (let i = 0; i <= yLabelCount; i++) {
+        const xp = maxXP * (i / yLabelCount);
         const y = yScale(xp);
 
         const tick = createSVGElement('line', {
@@ -143,17 +169,23 @@ function createXPProgressChart(data, containerId) {
             x: -10,
             y: y + 4,
             'text-anchor': 'end',
-            'font-size': '10px'
+            'font-size': isSmallScreen ? '8px' : '10px'
         });
-        label.textContent = xp;
+
+        // Format XP values to be more readable on small screens
+        // Use "k" for thousands on small screens
+        label.textContent = isSmallScreen && xp >= 1000 ?
+            `${Math.round(xp / 1000)}k` :
+            Math.round(xp);
+
         yAxis.appendChild(label);
     }
 
-    // Y axis title
+    // Y axis title - adjust position for small screens
     const yAxisTitle = createSVGElement('text', {
-        transform: `translate(-50,${height / 2}) rotate(-90)`,
+        transform: `translate(${isSmallScreen ? -30 : -50},${height / 2}) rotate(-90)`,
         'text-anchor': 'middle',
-        'font-size': '12px'
+        'font-size': isSmallScreen ? '10px' : '12px'
     });
     yAxisTitle.textContent = 'Total XP';
     yAxis.appendChild(yAxisTitle);
@@ -168,16 +200,18 @@ function createXPProgressChart(data, containerId) {
         d: linePath,
         fill: 'none',
         stroke: '#3498db',
-        'stroke-width': 2,
-    })
-    g.appendChild(line)
+        'stroke-width': isSmallScreen ? 1.5 : 2
+    });
+    g.appendChild(line);
 
-    // Add data points
+    // Add data points - adjust size for small screens
+    const pointRadius = isSmallScreen ? 3 : 4;
+
     chartData.forEach((point) => {
         const circle = createSVGElement('circle', {
             cx: xScale(point.date),
             cy: yScale(point.xp),
-            r: 4,
+            r: pointRadius,
             fill: '#3498db'
         });
 
@@ -203,6 +237,209 @@ function createXPProgressChart(data, containerId) {
 
         g.appendChild(circle);
     });
+
+    container.appendChild(svg);
+
+    // Add window resize listener to redraw chart on window resize
+    const resizeHandler = () => {
+        // Debounce the resize to avoid performance issues
+        if (resizeHandler.timeout) {
+            clearTimeout(resizeHandler.timeout);
+        }
+        resizeHandler.timeout = setTimeout(() => {
+            createXPProgressChart(data, containerId);
+        }, 250);
+    };
+
+    // Remove previous listener if exists
+    window.removeEventListener('resize', resizeHandler);
+    window.addEventListener('resize', resizeHandler);
+}
+
+function createProjectSuccessChart(data, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const passCount = data.filter(item => item.grade >= 1).length;
+    const failCount = data.length - passCount;
+
+    if (passCount + failCount === 0) {
+        container.textContent = 'No project data available';
+        return;
+    }
+
+    // Chart dimensions
+    const width = 300;
+    const height = 300;
+    const radius = Math.min(width, height) / 2
+
+    const svg = createSVGElement('svg', {
+        width,
+        height,
+        viewBox: `0 0 ${width} ${height}`
+    })
+
+    // Create group for chart elements centered in the SVG
+    const g = createSVGElement('g', {
+        transform: `translate(${width / 2},${height / 2})`
+    });
+    svg.appendChild(g);
+
+    // Calculate angles for the donut chart
+    const total = passCount + failCount;
+    const passAngle = (passCount / total) * 360;
+    const failAngle = (failCount / total) * 360;
+
+    // Handle 100% case specially
+    if (passCount === total) {
+        const outerCircle = createSVGElement('circle', {
+            cx: 0,
+            cy: 0,
+            r: radius,
+            fill: '#2ecc71' // Pass color
+        });
+        g.appendChild(outerCircle);
+
+        // Create inner circle for donut hole
+        const innerCircle = createSVGElement('circle', {
+            cx: 0,
+            cy: 0,
+            r: radius * 0.6,
+            fill: 'white' // Background color
+        });
+        g.appendChild(innerCircle);
+    }
+    else if (failCount === total) {
+        // Create a complete donut for 100% fail
+        const outerCircle = createSVGElement('circle', {
+            cx: 0,
+            cy: 0,
+            r: radius,
+            fill: '#e74c3c' // Fail color
+        });
+        g.appendChild(outerCircle);
+
+        // Create inner circle for donut hole
+        const innerCircle = createSVGElement('circle', {
+            cx: 0,
+            cy: 0,
+            r: radius * 0.6,
+            fill: 'white' // Background color
+        });
+        g.appendChild(innerCircle);
+    } else {
+
+        // Create arc paths
+        // Helper function to calculate arc path
+        function describeArc(startAngle, endAngle, innerRadius, outerRadius) {
+            const startRadians = (startAngle - 90) * Math.PI / 180;
+            const endRadians = (endAngle - 90) * Math.PI / 180;
+
+            const innerStartX = innerRadius * Math.cos(startRadians);
+            const innerStartY = innerRadius * Math.sin(startRadians);
+            const innerEndX = innerRadius * Math.cos(endRadians);
+            const innerEndY = innerRadius * Math.sin(endRadians);
+
+            const outerStartX = outerRadius * Math.cos(startRadians);
+            const outerStartY = outerRadius * Math.sin(startRadians);
+            const outerEndX = outerRadius * Math.cos(endRadians);
+            const outerEndY = outerRadius * Math.sin(endRadians);
+
+            const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+
+            const pathData = [
+                `M ${innerStartX} ${innerStartY}`,
+                `L ${outerStartX} ${outerStartY}`,
+                `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${outerEndX} ${outerEndY}`,
+                `L ${innerEndX} ${innerEndY}`,
+                `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStartX} ${innerStartY}`,
+                'Z'
+            ].join(' ');
+
+            return pathData;
+        }
+
+        // Pass segment
+        if (passCount > 0) {
+            const passArc = createSVGElement('path', {
+                d: describeArc(0, passAngle, radius * 0.6, radius),
+                fill: '#2ecc71'
+            });
+            g.appendChild(passArc);
+        }
+
+        // Fail segment
+        if (failCount > 0) {
+            const failArc = createSVGElement('path', {
+                d: describeArc(passAngle, 360, radius * 0.6, radius),
+                fill: '#e74c3c'
+            });
+            g.appendChild(failArc);
+        }
+    }
+
+    // Add text in the center
+    const centerText = createSVGElement('text', {
+        'text-anchor': 'middle',
+        'dominant-baseline': 'middle',
+        'font-size': '18px',
+        'font-weight': 'bold'
+    });
+    centerText.textContent = `${Math.round((passCount / total) * 100)}%`;
+    g.appendChild(centerText);
+
+    const subText = createSVGElement('text', {
+        'text-anchor': 'middle',
+        'dominant-baseline': 'middle',
+        y: 25,
+        'font-size': '14px'
+    });
+    subText.textContent = 'Success Rate';
+    g.appendChild(subText);
+
+    // Add legend
+    const legend = createSVGElement('g', {
+        transform: `translate(${-radius},${radius / 2 + 30})`
+    });
+    g.appendChild(legend);
+
+    // Pass legend
+    const passLegendRect = createSVGElement('rect', {
+        x: 0,
+        y: 0,
+        width: 15,
+        height: 15,
+        fill: '#2ecc71'
+    });
+    legend.appendChild(passLegendRect);
+
+    const passLegendText = createSVGElement('text', {
+        x: 20,
+        y: 12,
+        'font-size': '12px'
+    });
+    passLegendText.textContent = `Pass (${passCount})`;
+    legend.appendChild(passLegendText);
+
+    // Fail legend
+    const failLegendRect = createSVGElement('rect', {
+        x: 0,
+        y: 25,
+        width: 15,
+        height: 15,
+        fill: '#e74c3c'
+    });
+    legend.appendChild(failLegendRect);
+
+    const failLegendText = createSVGElement('text', {
+        x: 20,
+        y: 37,
+        'font-size': '12px'
+    });
+    failLegendText.textContent = `Fail (${failCount})`;
+    legend.appendChild(failLegendText);
 
     container.appendChild(svg);
 }

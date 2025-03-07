@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         await Promise.all([
             loadUserInfo(),
             loadXPInfo(),
-            loadSuccessRateInfo(),
             loadStatistics()
         ])
     } catch (error) {
@@ -16,15 +15,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 })
 
-
 async function loadUserInfo() {
     const container = document.getElementById('user-info-content')
+    const auditContainer = document.getElementById('audit-info-content')
     try {
         const data = await getUserProfile()
         const user = data.user[0]
 
         if (!user) {
             container.textContent = 'User information not found.';
+            auditContainer.textContent = 'User information not found.';
             return;
         }
 
@@ -34,9 +34,14 @@ async function loadUserInfo() {
                 <p><strong>Username:</strong> ${user.login}</p>
             </div>
         `;
+
+        auditContainer.innerHTML = `
+            <h2>${user.auditRatio.toFixed(1)}</h2>
+        `;
     } catch (error) {
         console.error('Error loading user info:', error);
         container.textContent = 'Failed to load user information.';
+        auditContainer.textContent = 'Failed to load user information.';
     }
 }
 
@@ -71,7 +76,7 @@ async function loadXPInfo() {
 
             <h4 style="margin-top: 15px;">Top Projects by XP:</h4>
             <ul>
-            ${Object.entries(xpByPath).slice(0,5).map(([ele, xp]) => `
+            ${Object.entries(xpByPath).slice(0, 5).map(([ele, xp]) => `
             <li><strong>${ele}</strong>: ${xp} XP</li>
             `).join('')}
             </ul>
@@ -89,33 +94,6 @@ async function loadXPInfo() {
     }
 }
 
-async function loadSuccessRateInfo() {
-    const container = document.getElementById('progress-info-content');
-
-    try {
-        const data = await getUserProgress();
-        const progress = data.progress;
-
-        if (!progress || progress.length === 0) {
-            container.textContent = 'No progress information found.';
-            return;
-        }
-
-        const totalEntries = progress.length;
-        const passedEntries = progress.filter(item => item.grade >= 1).length;
-        const passRate = (passedEntries / totalEntries) * 100;
-
-        let html = `
-            <h3>${passRate.toFixed(1)}%</h3>
-        `
-
-        container.innerHTML = html;
-    } catch (error) {
-        console.error('Error loading progress info:', error);
-        container.textContent = 'Failed to load progress information.';
-    }
-}
-
 async function loadStatistics() {
     try {
         const xpData = await getXPOverTime();
@@ -123,7 +101,19 @@ async function loadStatistics() {
         // console.log(xpData.transaction.reduce((acc,val) => acc += (Number(val.amount)),0))
         createXPProgressChart(xpData.transaction, 'xp-time-graph');
 
+        const projectData = await getProjectResults();
+        createProjectSuccessChart(projectData.progress, 'project-success-graph');
     } catch (error) {
-        
+        console.error('Error loading statistics:', error);
+
+        const xpGraph = document.getElementById('xp-time-graph');
+        if (xpGraph) {
+            xpGraph.textContent = 'Failed to load XP statistics.';
+        }
+
+        const projectGraph = document.getElementById('project-success-graph');
+        if (projectGraph) {
+            projectGraph.textContent = 'Failed to load project statistics.';
+        }
     }
 }

@@ -25,6 +25,10 @@ async function executeQuery(query) {
 
         const data = await response.json()
 
+        if (data.errors) {
+            throw new Error(data.errors[0].message);
+        }
+
         return data.data
     } catch (error) {
         console.error('GraphQL query error:', error);
@@ -38,6 +42,7 @@ async function getUserProfile() {
     user {
         id
         login
+        auditRatio
         }
     }
     `
@@ -66,7 +71,7 @@ async function getUserXP() {
     return executeQuery(query)
 }
 
-async function getUserProgress() {
+async function getProjectResults() {
     const query = `
     {
     progress(
@@ -81,6 +86,9 @@ async function getUserProgress() {
         id
         grade
         createdAt
+        object {
+          name
+        }
     }
     }
     `
