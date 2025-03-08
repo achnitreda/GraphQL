@@ -12,12 +12,10 @@ function createXPProgressChart(data, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Clean up any existing resize handlers
     if (window.chartResizeHandlers && window.chartResizeHandlers[containerId]) {
         window.removeEventListener('resize', window.chartResizeHandlers[containerId]);
     }
 
-    // Initialize the handlers object if it doesn't exist
     if (!window.chartResizeHandlers) {
         window.chartResizeHandlers = {};
     }
@@ -38,14 +36,11 @@ function createXPProgressChart(data, containerId) {
         return;
     }
 
-    // Get container width dynamically - RESPONSIVE APPROACH
     const containerWidth = container.clientWidth || 320;
     const isSmallScreen = containerWidth < 500;
 
-    // Calculate aspect ratio for height - maintain proportions on resize
     const aspectRatio = 0.6; // height = 60% of width
 
-    // Dynamic margins based on screen size
     const margin = {
         top: 20,
         right: isSmallScreen ? 10 : 20,
@@ -53,25 +48,20 @@ function createXPProgressChart(data, containerId) {
         left: isSmallScreen ? 40 : 60
     };
 
-    // Dynamic width and height based on container
     const width = containerWidth - margin.left - margin.right;
     const height = Math.min(containerWidth * aspectRatio, 300) - margin.top - margin.bottom;
 
-    // Create SVG with viewBox for responsive scaling
     const svg = createSVGElement('svg', {
         width: "100%",
         height: "100%",
         viewBox: `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`,
-        preserveAspectRatio: "xMidYMid meet"
     });
 
-    // Create group for chart elements with margin
     const g = createSVGElement('g', {
         transform: `translate(${margin.left},${margin.top})`
     });
     svg.appendChild(g);
 
-    // Find min and max values for scales
     const minDate = chartData[0].date;
     const maxDate = chartData[chartData.length - 1].date;
     const maxXP = chartData[chartData.length - 1].xp;
@@ -102,7 +92,7 @@ function createXPProgressChart(data, containerId) {
     });
     xAxis.appendChild(xAxisLine);
 
-    // X axis labels - adjust number of labels based on width
+    // X axis labels
     const labelCount = isSmallScreen ? 3 : 5;
 
     for (let i = 0; i <= labelCount; i++) {
@@ -120,7 +110,6 @@ function createXPProgressChart(data, containerId) {
         });
         xAxis.appendChild(tick);
 
-        // Label - use shorter date format on small screens
         const label = createSVGElement('text', {
             x: x,
             y: 20,
@@ -128,12 +117,9 @@ function createXPProgressChart(data, containerId) {
             'font-size': isSmallScreen ? '8px' : '10px'
         });
 
-        // Format dates differently based on screen size
         if (isSmallScreen) {
-            // Short format for small screens: "Jan 1" or "1/1"
             label.textContent = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
         } else {
-            // Regular format for larger screens
             label.textContent = date.toLocaleDateString();
         }
 
@@ -154,7 +140,7 @@ function createXPProgressChart(data, containerId) {
     });
     yAxis.appendChild(yAxisLine);
 
-    // Y axis labels - adjust number of ticks based on height
+    // Y axis labels
     const yLabelCount = isSmallScreen ? 3 : 5;
 
     for (let i = 0; i <= yLabelCount; i++) {
@@ -178,8 +164,6 @@ function createXPProgressChart(data, containerId) {
             'font-size': isSmallScreen ? '8px' : '10px'
         });
 
-        // Format XP values to be more readable on small screens
-        // Use "k" for thousands on small screens
         label.textContent = isSmallScreen && xp >= 1000 ?
             `${Math.round(xp / 1000)}k` :
             Math.round(xp);
@@ -187,7 +171,7 @@ function createXPProgressChart(data, containerId) {
         yAxis.appendChild(label);
     }
 
-    // Y axis title - adjust position for small screens
+    // Y axis title
     const yAxisTitle = createSVGElement('text', {
         transform: `translate(${isSmallScreen ? -30 : -50},${height / 2}) rotate(-90)`,
         'text-anchor': 'middle',
@@ -210,7 +194,7 @@ function createXPProgressChart(data, containerId) {
     });
     g.appendChild(line);
 
-    // Add data points - adjust size for small screens
+    // Add data points
     const pointRadius = isSmallScreen ? 3 : 4;
 
     chartData.forEach((point) => {
@@ -246,27 +230,23 @@ function createXPProgressChart(data, containerId) {
 
     container.appendChild(svg);
 
-    // Create a properly debounced resize handler
     const debounceResizeHandler = () => {
         if (debounceResizeHandler.timeout) {
             clearTimeout(debounceResizeHandler.timeout);
         }
-        
+
         debounceResizeHandler.timeout = setTimeout(() => {
-            // Only redraw if container width has changed
             const newWidth = container.clientWidth;
             if (newWidth !== containerWidth) {
                 requestAnimationFrame(() => {
                     createXPProgressChart(data, containerId);
                 });
             }
-        }, 250); // Wait 250ms after resize stops before redrawing
+        }, 250);
     };
 
-    // Store the handler reference to clean it up later
     window.chartResizeHandlers[containerId] = debounceResizeHandler;
-    
-    // Add the event listener
+
     window.addEventListener('resize', debounceResizeHandler);
 }
 
@@ -304,7 +284,6 @@ function createProjectSuccessChart(data, containerId) {
     // Calculate angles for the donut chart
     const total = passCount + failCount;
     const passAngle = (passCount / total) * 360;
-    const failAngle = (failCount / total) * 360;
 
     // Handle 100% case specially
     if (passCount === total) {
@@ -316,7 +295,6 @@ function createProjectSuccessChart(data, containerId) {
         });
         g.appendChild(outerCircle);
 
-        // Create inner circle for donut hole
         const innerCircle = createSVGElement('circle', {
             cx: 0,
             cy: 0,
@@ -326,7 +304,6 @@ function createProjectSuccessChart(data, containerId) {
         g.appendChild(innerCircle);
     }
     else if (failCount === total) {
-        // Create a complete donut for 100% fail
         const outerCircle = createSVGElement('circle', {
             cx: 0,
             cy: 0,
@@ -335,7 +312,6 @@ function createProjectSuccessChart(data, containerId) {
         });
         g.appendChild(outerCircle);
 
-        // Create inner circle for donut hole
         const innerCircle = createSVGElement('circle', {
             cx: 0,
             cy: 0,
@@ -397,7 +373,6 @@ function createProjectSuccessChart(data, containerId) {
     // Add text in the center
     const centerText = createSVGElement('text', {
         'text-anchor': 'middle',
-        'dominant-baseline': 'middle',
         'font-size': '18px',
         'font-weight': 'bold'
     });
@@ -406,7 +381,6 @@ function createProjectSuccessChart(data, containerId) {
 
     const subText = createSVGElement('text', {
         'text-anchor': 'middle',
-        'dominant-baseline': 'middle',
         y: 25,
         'font-size': '14px'
     });

@@ -26,3 +26,20 @@ For an XP value of 250:
 0.25 * 240 = 60 pixels
 240 - 60 = 180 pixels from the top edge
 ```
+
+- Math.cos and Math.sin:
+```
+If radius = 100:
+
+At 0 degrees: cos = 1, sin = 0
+Point is at (100, 0) = right edge
+
+At 90 degrees: cos = 0, sin = 1
+Point is at (0, 100) = bottom edge
+
+At 180 degrees: cos = -1, sin = 0
+Point is at (-100, 0) = left edge
+
+At 270 degrees: cos = 0, sin = -1
+Point is at (0, -100) = top edge
+```
